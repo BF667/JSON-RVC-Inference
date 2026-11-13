@@ -4,7 +4,8 @@ import subprocess
 import random
 import gradio as gr
 
-from fairseq import checkpoint_utils
+from infer.lib.utils import load_audio_infer, load_embedding
+
 from pytube import YouTube
 
 def get_index_path_from_model(sid):
@@ -22,17 +23,13 @@ def get_index_path_from_model(sid):
         "",
     )
 
+    
 def load_hubert(config):
-    models, _, _ = checkpoint_utils.load_model_ensemble_and_task(
-        ["assets/hubert/hubert_base.pt"],
-        suffix="",
-    )
-    hubert_model = models[0]
-    hubert_model = hubert_model.to(config.device)
-    if config.is_half:
-        hubert_model = hubert_model.half()
-    else:
-        hubert_model = hubert_model.float()
+  //  device = "cuda" if torch.cuda.is_available() else "cpu"
+    embedder_model = "contentvec"
+    self.hubert_model = load_embedding(embedder_model, embedder_model_custom=None)
+    self.hubert_model = self.hubert_model.float().to(config.device)
+    
     return hubert_model.eval()
 
 async def download_and_split_audio(url, model):
