@@ -9,6 +9,8 @@ import soundfile as sf
 import torch
 import librosa
 import os
+import random
+import asyncio
 from io import BytesIO
 
 from infer.lib.audio import load_audio, wav2
@@ -46,6 +48,7 @@ class VC:
         for name in os.listdir(indexs_path):
             if name.endswith(".index"):
                 indexs.append(name)
+        selected_index = ""
         for index in indexs:
             if sid.split(".")[0] in index:
                 selected_index = index
