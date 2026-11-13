@@ -1,14 +1,11 @@
 import math
 import random
 from typing import Optional, Tuple
-from fairseq.checkpoint_utils import load_model_ensemble_and_task
 import numpy as np
 import torch
 import torch.nn.functional as F
 
-# from fairseq.data.data_utils import compute_mask_indices
-from fairseq.utils import index_put
-
+from infer.lib.utils import load_audio_infer, load_embedding
 
 # @torch.jit.script
 def pad_to_multiple(x, multiple, dim=-1, value=0):
@@ -263,80 +260,12 @@ def apply_mask(self, x, padding_mask, target_list):
     return x, mask_indices
 
 
-def get_hubert_model(
-    model_path="assets/hubert/hubert_base.pt", device=torch.device("cpu")
-):
-    models, _, _ = load_model_ensemble_and_task(
-        [model_path],
-        suffix="",
-    )
-    hubert_model = models[0]
-    hubert_model = hubert_model.to(device)
+def get_hubert_model():
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    embedder_model = "contentvec"
+    self.hubert_model = load_embedding(embedder_model, embedder_model_custom=None)
+    self.hubert_model = self.hubert_model.float().to(device)
+    self.hubert_model.eval()
+    
 
-    def _apply_mask(x, padding_mask, target_list):
-        return apply_mask(hubert_model, x, padding_mask, target_list)
 
-    hubert_model.apply_mask = _apply_mask
-
-    def _extract_features(
-        x,
-        padding_mask=None,
-        tgt_layer=None,
-        min_layer=0,
-    ):
-        return extract_features(
-            hubert_model.encoder,
-            x,
-            padding_mask=padding_mask,
-            tgt_layer=tgt_layer,
-            min_layer=min_layer,
-        )
-
-    hubert_model.encoder.extract_features = _extract_features
-
-    hubert_model._forward = hubert_model.forward
-
-    def hubert_extract_features(
-        self,
-        source: torch.Tensor,
-        padding_mask: Optional[torch.Tensor] = None,
-        mask: bool = False,
-        ret_conv: bool = False,
-        output_layer: Optional[int] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        res = self._forward(
-            source,
-            padding_mask=padding_mask,
-            mask=mask,
-            features_only=True,
-            output_layer=output_layer,
-        )
-        feature = res["features"] if ret_conv else res["x"]
-        return feature, res["padding_mask"]
-
-    def _hubert_extract_features(
-        source: torch.Tensor,
-        padding_mask: Optional[torch.Tensor] = None,
-        mask: bool = False,
-        ret_conv: bool = False,
-        output_layer: Optional[int] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        return hubert_extract_features(
-            hubert_model, source, padding_mask, mask, ret_conv, output_layer
-        )
-
-    hubert_model.extract_features = _hubert_extract_features
-
-    def infer(source, padding_mask, output_layer: torch.Tensor):
-        output_layer = output_layer.item()
-        logits = hubert_model.extract_features(
-            source=source, padding_mask=padding_mask, output_layer=output_layer
-        )
-        feats = hubert_model.final_proj(logits[0]) if output_layer == 9 else logits[0]
-        return feats
-
-    hubert_model.infer = infer
-    # hubert_model.forward=infer
-    # hubert_model.forward
-
-    return hubert_model
