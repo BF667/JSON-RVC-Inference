@@ -32,6 +32,10 @@ psutil==7.2.2
 uvicorn>=0.30.0
 fastapi>=0.110.0
 websockets>=13.0
+av
+praat-parselmouth 
+pyworld 
+python-ffmpeg
 
 onnxruntime-gpu==1.22.0; sys_platform == "win32"
 nvidia-cublas-cu12==12.9.2.10; sys_platform == "win32"
